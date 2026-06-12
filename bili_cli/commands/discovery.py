@@ -1,4 +1,4 @@
-"""Discovery commands (hot/rank)."""
+"""Discovery commands (hot/rank/recommend)."""
 
 from __future__ import annotations
 
@@ -104,6 +104,57 @@ def rank_cmd(day: str, count: int, as_json: bool, as_yaml: bool):
             owner.get("name", "")[:12],
             common.format_count(stat.get("view", 0)),
             str(v.get("score", "")),
+        )
+
+    common.console.print(table)
+
+
+@click.command(name="recommend")
+@click.option("--max", "-n", "count", default=20, type=click.IntRange(1), help="显示数量 (默认 20，最小 1)。")
+@common.structured_output_options
+def recommend_cmd(count: int, as_json: bool, as_yaml: bool):
+    """查看首页个性化推荐视频（需登录）。"""
+    from .. import client
+
+    output_format = common.resolve_output_format(as_json=as_json, as_yaml=as_yaml)
+
+    credential = common.require_login()
+    data = common.run_or_exit(client.get_homepage_recommend(credential=credential), "获取首页推荐失败")
+
+    # The API returns a list of video items directly
+    items = data if isinstance(data, list) else data.get("item", [])
+
+    if common.emit_structured(
+        {
+            "items": [payloads.normalize_video_summary(item) for item in items[:count]],
+            "count": min(count, len(items)),
+        },
+        output_format,
+    ):
+        return
+
+    if not items:
+        common.console.print("[yellow]未获取到推荐视频[/yellow]")
+        return
+
+    table = Table(title="📺 首页推荐", border_style="blue")
+    table.add_column("#", style="dim", width=4)
+    table.add_column("BV号", style="cyan", width=14)
+    table.add_column("标题", max_width=36)
+    table.add_column("UP主", width=12)
+    table.add_column("播放", width=8, justify="right")
+    table.add_column("点赞", width=8, justify="right")
+
+    for i, v in enumerate(items[:count], 1):
+        owner = v.get("owner", {})
+        stat = v.get("stat", {})
+        table.add_row(
+            str(i),
+            v.get("bvid", ""),
+            v.get("title", "")[:36],
+            owner.get("name", "")[:12],
+            common.format_count(stat.get("view", 0)),
+            common.format_count(stat.get("like", 0)),
         )
 
     common.console.print(table)

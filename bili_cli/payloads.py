@@ -65,6 +65,8 @@ def normalize_relation(info: dict[str, Any]) -> dict[str, Any]:
 def normalize_video_summary(video: dict[str, Any]) -> dict[str, Any]:
     owner = video.get("owner", {}) if isinstance(video.get("owner"), dict) else {}
     stat = video.get("stat", {}) if isinstance(video.get("stat"), dict) else {}
+    pages = video.get("pages", []) if isinstance(video.get("pages"), list) else []
+    first_page = pages[0] if pages and isinstance(pages[0], dict) else {}
     duration_seconds = _to_int(video.get("duration"), _to_int(video.get("length"), 0))
     url = ""
     if isinstance(video.get("bvid"), str) and video.get("bvid"):
@@ -74,6 +76,8 @@ def normalize_video_summary(video: dict[str, Any]) -> dict[str, Any]:
         "id": str(video.get("bvid") or video.get("aid") or ""),
         "bvid": video.get("bvid", ""),
         "aid": _to_int(video.get("aid"), 0),
+        "cid": _to_int(video.get("cid"), _to_int(first_page.get("cid"), 0)),
+        "page": _to_int(first_page.get("page"), 1),
         "title": _strip_html(video.get("title")),
         "description": video.get("desc", "") or video.get("description", ""),
         "duration_seconds": duration_seconds,

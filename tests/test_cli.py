@@ -234,6 +234,30 @@ def test_video_structured_output_includes_requested_extras(runner, mock_video_in
         assert data["related"][0]["bvid"] == "BV1rel"
 
 
+def test_hydrate_json_includes_subtitle_and_limited_comments(runner, mock_video_info):
+    raw = [{"content": "Hello", "from": 0.0, "to": 2.5}]
+    comments = [
+        {"rpid": 1, "member": {"mid": 2, "uname": "TestUser"}, "content": {"message": "Nice!"}, "like": 3},
+        {"rpid": 2, "member": {"mid": 3, "uname": "Another"}, "content": {"message": "Great!"}, "like": 2},
+    ]
+    with patch("bili_cli.commands.common.get_credential", return_value=None), \
+         patch("bili_cli.client.extract_bvid", return_value="BV1test123"), \
+         patch("bili_cli.client.get_video_info", new_callable=AsyncMock, return_value=mock_video_info), \
+         patch("bili_cli.client.get_video_subtitle", new_callable=AsyncMock, return_value=("Hello", raw)), \
+         patch("bili_cli.client.get_video_comments", new_callable=AsyncMock, return_value={"replies": comments}):
+        result = runner.invoke(
+            cli,
+            ["hydrate", "BV1test123", "--comment-limit", "1", "--json"],
+        )
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)["data"]
+    assert data["mode"] == "hydrate"
+    assert data["subtitle"]["available"] is True
+    assert len(data["comments"]) == 1
+    assert data["comments"][0]["author"]["name"] == "TestUser"
+
+
 def test_video_subtitle_error_is_nonfatal(runner, mock_video_info):
     with patch("bili_cli.commands.common.get_credential", return_value=None), \
          patch("bili_cli.client.extract_bvid", return_value="BV1test123"), \

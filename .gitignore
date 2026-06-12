@@ -2,6 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 *.egg-info/
 dist/
 build/
@@ -25,5 +30,10 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Local temp files
+*.tmp
+*.bak
+*.log
 
 # uv

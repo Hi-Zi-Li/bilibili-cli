@@ -5,7 +5,7 @@ Usage:
     bili video <BV号或URL> [--subtitle] [--ai] [--comments] [--related] [--yaml|--json]
     bili user <UID或用户名>          bili user-videos <UID> [--max N]
     bili search <关键词> [--type user|video] [--yaml|--json]
-    bili hot / rank / feed / my-dynamics / following / history / watch-later / favorites
+    bili hot / rank / recommend / feed / my-dynamics / following / history / watch-later / favorites
     bili dynamic-post <TEXT> / dynamic-delete <动态ID>
     bili like / coin / triple <BV号> / unfollow <UID>
     bili audio <BV号> [--segment N] [--no-split] [-o DIR]
@@ -16,7 +16,7 @@ from __future__ import annotations
 import click
 
 from . import __version__
-from .commands import account, audio, collections, common, discovery, interactions, user_search, video
+from .commands import account, audio, collections, common, discovery, interactions, user_search, video, video_download
 
 
 # Keep helper names for backward compatibility with tests/importers.
@@ -43,6 +43,8 @@ cli.add_command(account.status)
 cli.add_command(account.whoami)
 
 cli.add_command(video.video)
+cli.add_command(video.hydrate)
+cli.add_command(video.comments)
 
 cli.add_command(user_search.user)
 cli.add_command(user_search.user_videos)
@@ -59,6 +61,7 @@ cli.add_command(collections.dynamic_delete)
 
 cli.add_command(discovery.hot_cmd)
 cli.add_command(discovery.rank_cmd)
+cli.add_command(discovery.recommend_cmd)
 
 cli.add_command(interactions.like)
 cli.add_command(interactions.coin)
@@ -66,6 +69,7 @@ cli.add_command(interactions.triple)
 cli.add_command(interactions.unfollow)
 
 cli.add_command(audio.audio)
+cli.add_command(video_download.download)
 
 
 if __name__ == "__main__":

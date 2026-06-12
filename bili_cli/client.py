@@ -331,6 +331,11 @@ async def get_hot_videos(pn: int = 1, ps: int = 20) -> dict[str, Any]:
     return await _call_api("获取热门视频", hot.get_hot_videos(pn=pn, ps=ps))
 
 
+async def get_homepage_recommend(credential: Credential | None = None) -> dict[str, Any]:
+    """Fetch homepage personalized recommended videos."""
+    return await _call_api("获取首页推荐", homepage.get_videos(credential=credential))
+
+
 async def get_rank_videos(day: int = 3) -> dict[str, Any]:
     """Fetch ranking videos (default: 3-day rank)."""
     day_type = rank.RankDayType.THREE_DAY if day == 3 else rank.RankDayType.WEEK
@@ -661,6 +666,34 @@ async def get_audio_url(bvid: str, credential: Credential | None = None) -> str:
     raise BiliError("无法获取音频流（可能是会员专属视频）")
 
 
+async def get_video_url(bvid: str, credential: Credential | None = None) -> str:
+    """Get the best video stream URL for a video (DASH preferred)."""
+    from bilibili_api.video import AudioQuality, VideoDownloadURLDataDetecter
+
+    v = video.Video(bvid=bvid, credential=credential)
+    download_data = await _call_api("获取下载地址", v.get_download_url(page_index=0))
+    detector = VideoDownloadURLDataDetecter(download_data)
+    streams = detector.detect_best_streams(
+        audio_max_quality=AudioQuality._64K,
+        no_dolby_audio=True,
+        no_hires=True,
+    )
+
+    if detector.check_flv_mp4_stream():
+        if streams and streams[0] and hasattr(streams[0], "url"):
+            return streams[0].url
+    else:
+        # DASH: video stream is at index 0
+        if streams and streams[0] is not None and hasattr(streams[0], "url"):
+            return streams[0].url
+        # Fallback: find any stream with video_quality
+        for s in streams:
+            if s is not None and hasattr(s, "video_quality"):
+                return s.url
+
+    raise BiliError("无法获取视频流（可能是会员专属视频或质量不可用）")
+
+
 async def download_audio(audio_url: str, output_path: str) -> int:
     """Download audio stream to a file. Returns bytes written."""
     timeout = aiohttp.ClientTimeout(total=300)
@@ -693,6 +726,40 @@ async def download_audio(audio_url: str, output_path: str) -> int:
                 raise NetworkError(f"音频下载失败: {e}") from e
 
     raise NetworkError("音频下载失败: 重试次数用尽")
+
+
+async def download_video(video_url: str, output_path: str) -> int:
+    """Download video stream to a file. Returns bytes written."""
+    timeout = aiohttp.ClientTimeout(total=300)
+    max_retries = 3
+
+    for attempt in range(max_retries):
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(video_url, headers=_DOWNLOAD_HEADERS) as resp:
+                    if resp.status == 200:
+                        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+                        total_bytes = 0
+                        with open(output_path, "wb") as f:
+                            async for chunk in resp.content.iter_chunked(256 * 1024):
+                                if not chunk:
+                                    continue
+                                f.write(chunk)
+                                total_bytes += len(chunk)
+                        return total_bytes
+                    if attempt < max_retries - 1:
+                        logger.warning("Download HTTP %d, retrying...", resp.status)
+                        await asyncio.sleep(2)
+                    else:
+                        raise NetworkError(f"视频下载失败: HTTP {resp.status}")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            if attempt < max_retries - 1:
+                logger.warning("Download error: %s, retrying...", e)
+                await asyncio.sleep(2)
+            else:
+                raise NetworkError(f"视频下载失败: {e}") from e
+
+    raise NetworkError("视频下载失败: 重试次数用尽")
 
 
 def split_audio(input_path: str, output_dir: str, segment_seconds: int = 25) -> list[str]:

@@ -18,7 +18,6 @@ import time
 from pathlib import Path
 from typing import Literal
 
-import qrcode
 from bilibili_api.login_v2 import QrCodeLogin, QrCodeLoginEvents
 from bilibili_api.utils.network import Credential
 
@@ -306,6 +305,8 @@ def _render_compact_qr(data: str) -> str | None:
     Each module is 1 character wide (vs 2 in qrcode-terminal), so total area
     is ~25% of the original.
     """
+    import qrcode
+
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L)
     qr.add_data(data)
     qr.make(fit=True)

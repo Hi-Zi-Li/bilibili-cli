@@ -107,6 +107,8 @@ bili hot                       # Trending/popular videos
 bili hot --page 2 --max 10     # Page 2, limit 10
 bili rank                      # Site-wide ranking (3-day)
 bili rank --day 7 --max 30     # 7-day ranking, top 30
+bili recommend                 # Homepage personalized recommendations (requires login)
+bili recommend --max 20        # Top 20 recommended videos
 bili feed                      # Dynamic timeline (requires login)
 bili feed --offset 1234567890  # Next page via returned cursor
 bili my-dynamics               # My posted dynamics (requires login)
@@ -134,6 +136,19 @@ bili audio BV1ABcsztEcY                 # Split to /tmp/bilibili-cli/{title}/
 bili audio BV1ABcsztEcY --segment 60    # 60s per segment
 bili audio BV1ABcsztEcY --no-split      # Full m4a file, no splitting
 bili audio BV1ABcsztEcY -o ~/data/      # Custom output directory
+```
+
+### Video Download
+
+Download video and audio streams for offline viewing. Requires ffmpeg for automatic merging.
+
+```bash
+# Download video and audio streams, merge with ffmpeg (if available)
+bili download BV1ABcsztEcY                 # Download and merge to MP4
+bili download BV1ABcsztEcY --no-merge      # Keep separate video/audio files
+bili download BV1ABcsztEcY --video-only    # Download video stream only
+bili download BV1ABcsztEcY --audio-only    # Download audio stream only
+bili download BV1ABcsztEcY -o ~/videos/    # Custom output directory
 ```
 
 ### Interactions (require login)
